@@ -1,0 +1,10 @@
+export const prettierConfig = `
+{
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "none",
+    "printWidth": 120,
+    "arrowParens": "always",
+    "endOfLine": "auto"
+}
+`.trim();
