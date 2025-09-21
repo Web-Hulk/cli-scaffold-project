@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import chalk from 'chalk';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import fs from 'fs-extra';
@@ -14,21 +15,48 @@ import { questions } from './questions';
 
 const program = new Command();
 
+const REQUIRED_KEYS = [
+    'framework',
+    'packageManager',
+    'routing',
+    'query',
+    'forms',
+    'stateManagement',
+    'styling',
+    'icons',
+    'extras'
+];
+
 program
     .name('cli-frameworks-setup')
     .description('Scaffold Vite + React + TS')
     .version('1.0.0');
 
 program
+    .option("-v, --verbose", "Show detailed output from package manager")
+    .option("-q, --quiet", "Suppress most output")
+
+program
     .command("init <project-name>")
     .description("Initialize new project: Vite + React + TypeScript")
     .action(async (projectName) => {
         const responses = await questions;
-        console.log('Responses: ', responses);
+        const { verbose } = program.opts();
+        const { framework, packageManager, routing, query, forms, stateManagement, styling, icons, extras } = responses;
 
-        const { framework, packageManager, extras } = responses;
-        const spinner = ora(`Initializing project ${projectName}`).start();
+        // Let users know that Ctrl+C may not work in all terminals, and recommend using CMD or PowerShell for best results.
+        if (REQUIRED_KEYS.some(key => typeof responses[key as keyof typeof responses] === 'undefined')) {
+            console.log('Process canceled by user.');
+            process.exit(0);
+        }
 
+        const stdioSetting  = verbose ? 'inherit' : 'pipe';
+        const setEnabled = verbose ? '--verbose' : '--quiet';
+        console.log(chalk.bold.blue(`\n${setEnabled} mode is enabled`))
+
+        const spinner = ora(chalk.bold.green(`Initializing project ${projectName}.`)).start();
+
+        // One of the steps is adding node-modules, we need to fix it!
         try {
             const targetDir = path.resolve(process.cwd(), projectName);
 
@@ -37,19 +65,138 @@ program
                 process.exit(1);
             }
 
+            // Add framework
             if (framework === 'vite-react-ts') {
-                await execa(packageManager, ["create", "vite", projectName, "--template", "react-ts"], { stdio: 'inherit'});
+                // You can set stdio to 'inherit' to see the output in real-time
+                await execa(packageManager, ["create", "vite", projectName, "--template", "react-ts"], { stdio: stdioSetting });
             } else if (framework === 'vue-ts') {
-                 await execa(packageManager, ["create", "vite", projectName, "--template", "vue-ts"], { stdio: 'inherit'});
+                 await execa(packageManager, ["create", "vite", projectName, "--template", "vue-ts"], { stdio: stdioSetting });
             }
-
-            spinner.succeed('Project initialized.');
 
             process.chdir(targetDir);
 
+            // Add routing
+            if (routing.includes('react-router')) {
+                const spinnerRouter = ora('Installing React Router...').start();
+
+                try {
+                    await execa(packageManager, ["add", "react-router"], { stdio: stdioSetting  });
+                    spinnerRouter.succeed('React Router installed.');
+                } catch (error) {
+                    spinnerRouter.fail("Error installing React Router.");
+                    console.error(error);
+                }
+            }
+
+            // Add query
+            if (query.includes('axios')) {
+                const spinnerQuery = ora('Installing React Query...').start();
+
+                try {
+                    await execa(packageManager, ["add" , "axios"], { stdio: stdioSetting  });
+                    spinnerQuery.succeed('Axios installed.');
+                } catch (error) {
+                    spinnerQuery.fail("Error installing React Query.");
+                    console.error(error);
+                }
+            } else if (query.includes('swr')) {
+                const spinnerQuery = ora('Installing SWR...').start();
+
+                try {
+                    await execa(packageManager, ["add" , "swr"], { stdio: stdioSetting  });
+                    spinnerQuery.succeed('SWR installed.');
+                } catch (error) {
+                    spinnerQuery.fail("Error installing SWR.");
+                    console.error(error);
+                }
+            } else if (query.includes('react-query')) {
+                const spinnerQuery = ora('Installing React Query...').start();
+
+                try {
+                    await execa(packageManager, ["add" , "@tanstack/react-query"], { stdio: stdioSetting  });
+                    spinnerQuery.succeed('React Query installed.');
+                } catch (error) {
+                    spinnerQuery.fail("Error installing React Query.");
+                    console.error(error);
+                }   
+            }
+
+            // Add forms
+            if (forms.includes("react-hook-form")) {
+                const spinnerForms = ora('Installing React Hook Form...').start();
+
+                try {
+                    await execa(packageManager, ["add", "react-hook-form"], { stdio: stdioSetting  });
+                    spinnerForms.succeed('React Hook Form installed.');
+                } catch (error) {
+                    spinnerForms.fail("Error installing React Hook Form.");
+                    console.error(error);
+                }
+            } else if (forms.includes("formik")) {
+                const spinnerForms = ora('Installing Formik...').start();
+
+                try {
+                    await execa(packageManager, ["add", "-D", "formik"], { stdio: stdioSetting  });
+                    spinnerForms.succeed('Formik installed.');
+                } catch (error) {
+                    spinnerForms.fail("Error installing Formik.");
+                    console.error(error);
+                }
+            }
+            
+            // Add state management
+            if (stateManagement.includes("zustand")) {
+                const spinnerStateManagement = ora('Installing Zustand...').start();
+
+                try {
+                    await execa(packageManager, ["add", "zustand"], {stdio: stdioSetting });
+                    spinnerStateManagement.succeed('Zustand installed.');
+                } catch (error) {
+                    spinnerStateManagement.fail("Error installing Zustand.");
+                    console.error(error);
+                }
+            }
+
+            // Add styling
+            if (styling.includes('tailwindcss')) {
+                const spnnerStyling = ora('Installing Tailwind CSS...').start();
+
+                try {
+                    await execa(packageManager, ["add", "tailwindcss", "@tailwindcss/vite"], { stdio: stdioSetting  });
+                    spnnerStyling.succeed('Tailwind installed.');
+                } catch (error) {
+                    spnnerStyling.fail("Error installing Tailwind CSS.");
+                    console.error(error);
+                }
+            } else if (styling.includes('sass')) {
+                const spnnerStyling = ora('Installing SASS...').start();
+
+                try {
+                    await execa(packageManager, ["add", "sass"], { stdio: stdioSetting  });
+                    spnnerStyling.succeed('SASS installed.');
+                } catch (error) {
+                    spnnerStyling.fail("Error installing SASS.");
+                    console.error(error);
+                }
+            }
+
+            // Add icons
+            if (icons.includes('lucide-icons')) {
+                const spinnerIcons = ora('Installing Lucide Icons...').start();
+
+                try {
+                    await execa(packageManager, ["add", "lucide-react"], { stdio: stdioSetting  });
+                    spinnerIcons.succeed('Lucide Icons installed.');
+                } catch (error) {
+                    spinnerIcons.fail("Error installing Lucide Icons.");
+                    console.error(error);
+                }
+            }
+
+            // Add ESLint and Prettier
             if (extras.includes('eslint-prettier')) {
-                // Add ESLint and Prettier
                 const spinnerESLint = ora('Setting up ESLint and Prettier...').start();
+                
                 try {
                     await execa(packageManager, [
                         "add", "-D",
@@ -67,8 +214,8 @@ program
                         "typescript-eslint",
                         "@typescript-eslint/eslint-plugin",
                         "@typescript-eslint/parser", 
-                    ], {stdio: 'inherit'});
-                    await execa(packageManager, ["rm", "-D", "globals"], {stdio: 'inherit'});
+                    ], {stdio: stdioSetting });
+                    await execa(packageManager, ["rm", "-D", "globals"], {stdio: stdioSetting });
 
                     await fs.writeFile('eslint.config.js', eslintConfig, 'utf8');
                     await fs.writeFile(".prettierrc", prettierConfig, "utf8");
@@ -92,13 +239,14 @@ program
                 }
             } 
             
+            // Husky and lint-staged
             if (extras.includes('husky-lint-staged')) {
-                // Husky and lint-staged
                 const spinnerHusky = ora('Setting up Husky and lint-staged...').start();
+
                 try {
-                    await execa(packageManager, ["add", "-D", "husky"], { stdio: 'inherit' });
-                    await execa(packageManager, ["exec", "husky", "init"], { stdio: 'inherit' });
-                    await execa(packageManager, ["add", "-D", "lint-staged"], { stdio: 'inherit' });
+                    await execa(packageManager, ["add", "-D", "husky"], { stdio: stdioSetting  });
+                    await execa(packageManager, ["exec", "husky", "init"], { stdio: stdioSetting  });
+                    await execa(packageManager, ["add", "-D", "lint-staged"], { stdio: stdioSetting  });
     
                     await fs.writeFile(".husky/pre-commit", huskyHookConfig, { mode: 0o755 });
     
@@ -120,12 +268,12 @@ program
                 }
             } 
             
+            // Add Aliases
             if (extras.includes('vite-aliases')) {
-                // Add Aliases
                 const spinnerAlias = ora("Setting up Vite aliases...").start();
     
                 try {
-                    await execa(packageManager, ["add", "-D", "vite-tsconfig-paths"], { stdio: 'inherit' });
+                    await execa(packageManager, ["add", "-D", "vite-tsconfig-paths"], { stdio: stdioSetting  });
                     
                     await fs.writeFile("vite.config.ts", viteConfig, "utf8");
     
@@ -139,11 +287,12 @@ program
                 }
             }
 
+            // Add CLSX
             if (extras.includes('clsx')) {
                 const spinnerCLSX = ora('Installing CLSX...').start();
 
                 try {
-                    await execa(packageManager, ["add", "-D", "clsx"], { stdio: 'inherit' });
+                    await execa(packageManager, ["add", "-D", "clsx"], { stdio: stdioSetting  });
                     spinnerCLSX.succeed('CLSX installed.');
                 } catch (error) {
                     spinnerCLSX.fail("Error installing CLSX.");
@@ -151,7 +300,9 @@ program
                 }
             }
 
-            console.log(`cd ${projectName}`);
+            spinner.succeed('Project initialized.');
+
+            console.log(`\ncd ${projectName}`);
             console.log(`${packageManager} install`);
             console.log(`${packageManager} run dev`);
         } catch (error) {
