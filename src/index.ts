@@ -51,14 +51,11 @@ program
     const setEnabled = verbose ? '--verbose' : '--quiet';
     console.log(chalk.bold.blue(`\n${setEnabled} mode is enabled`));
 
-    const spinner = ora(chalk.bold.green(`Initializing project ${projectName}.`)).start();
-
-    // One of the steps is adding node-modules, we need to fix it!
     try {
       const targetDir = path.resolve(process.cwd(), projectName);
 
       if (fs.existsSync(targetDir)) {
-        spinner.fail(`Catalog ${projectName} already exists!`);
+        console.log(chalk.bold.red(`Catalog ${projectName} already exists!`));
         process.exit(1);
       }
 
@@ -299,13 +296,19 @@ program
         }
       }
 
-      spinner.succeed('Project initialized.');
+      console.log(chalk.bold.green('\nProject initialized.'));
+
+      const nodeModulesPath = path.join(targetDir, 'node_modules');
+      if (fs.existsSync(nodeModulesPath)) {
+        await fs.remove(nodeModulesPath);
+        console.log(chalk.bold.yellow('\nRemoved node_modules to ensure a clean install for the user.'));
+      }
 
       console.log(`\ncd ${projectName}`);
       console.log(`${packageManager} install`);
       console.log(`${packageManager} run dev`);
     } catch (error) {
-      spinner.fail('Error initializing project.');
+      console.log(chalk.bold.red('\nError initializing project.'));
       console.error(error);
       process.exit(1);
     }
